@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+    <title>Pixel Flow</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #0f1a2b; }
+      body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      /* The canvas always fills the window: landscape on desktop, portrait on phones. */
+      #stage { position: fixed; inset: 0; background: #231F20; }
+      #unity-canvas { width: 100%; height: 100%; display: block; outline: none; }
+      #loading { position: absolute; left: 12%; right: 12%; bottom: 14%; text-align: center; font: 600 14px/1.4 system-ui, sans-serif; color: #fff; }
+      #bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.2); overflow: hidden; margin-bottom: 8px; }
+      #fill { width: 0; height: 100%; border-radius: 5px; background: #ffd23f; transition: width .15s linear; }
+      #error { display: none; position: absolute; left: 8%; right: 8%; top: 40%; padding: 12px; border-radius: 8px; background: rgba(0,0,0,.75); color: #fff; font: 14px/1.4 system-ui, sans-serif; text-align: center; }
+      /* Phones: the game is portrait and the web cannot lock orientation. */
+      #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0f1a2b; color: #fff; font: 600 18px/1.5 system-ui, sans-serif; text-align: center; align-items: center; justify-content: center; flex-direction: column; }
+      #rotate .phone { width: 46px; height: 80px; border: 4px solid #fff; border-radius: 10px; margin-bottom: 18px; animation: tilt 1.6s ease-in-out infinite; }
+      @keyframes tilt { 0%, 20% { transform: rotate(90deg); } 60%, 100% { transform: rotate(0deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading"><div id="bar"><div id="fill"></div></div><span id="status">Loading...</span></div>
+      <div id="error"></div>
+    </div>
+    <div id="rotate"><div class="phone"></div>Please rotate your device</div>
+
+    <script src="Build/7a8ab1666a62c78ea3eecc58860af787.loader.js"></script>
+    <script>
+      var stage = document.getElementById('stage');
+      var canvas = document.getElementById('unity-canvas');
+      var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      var isPhone = isTouch && /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+      var rotate = document.getElementById('rotate');
+
+      // Desktop: landscape, whatever shape the window is. Phone: portrait only.
+      function layout() {
+        var wrongWay = isPhone && window.innerWidth > window.innerHeight;
+        rotate.style.display = wrongWay ? 'flex' : 'none';
+      }
+      window.addEventListener('resize', layout);
+      window.addEventListener('orientationchange', layout);
+      layout();
+
+      // Keyboard input only reaches the game while the canvas has focus.
+      function focusCanvas() { canvas.focus(); }
+      window.addEventListener('pointerdown', focusCanvas);
+      // Stop the page from scrolling on Space / arrow keys.
+      window.addEventListener('keydown', function (e) {
+        if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.key) >= 0) e.preventDefault();
+      });
+
+      function showError(message) {
+        var el = document.getElementById('error');
+        el.textContent = message + '  (tap to reload)';
+        el.style.display = 'block';
+        el.onclick = function () { location.reload(); };
+      }
+
+      createUnityInstance(canvas, {
+        arguments: [],
+        dataUrl: "Build/e7b4e3b96bfa115e27de1982028f9a37.data.unityweb",
+        frameworkUrl: "Build/55e00bf18de16612bab6af4f5f550e67.framework.js.unityweb",
+        codeUrl: "Build/cd26d6a141372656f146351dc9925f71.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Factorial Studio",
+        productName: "Pixel Flow",
+        productVersion: "0.1.0",
+        // Cap the render resolution on high-DPI phones so the GPU is not overloaded.
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      }, function (progress) {
+        document.getElementById('fill').style.width = Math.round(progress * 100) + '%';
+        document.getElementById('status').textContent = 'Loading... ' + Math.round(progress * 100) + '%';
+      }).then(function (unityInstance) {
+        document.getElementById('loading').style.display = 'none';
+        focusCanvas();
+      }).catch(function (message) {
+        showError(String(message));
+      });
+    </script>
+  </body>
+</html>
